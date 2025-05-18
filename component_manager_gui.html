@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电子元器件管理系统</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 5px;
+            margin-top: 5px;
+        }
+        button {
+            margin-top: 10px;
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #componentList {
+            margin-top: 20px;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+        .componentItem {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            }
+            .componentItem.selected {
+                background-color: #e0f7fa;
+        #componentBox {
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        #componentBox td {
+            border: 1px solid #ddd;
+            width: 40px;
+            height: 40px;
+            text-align: center;
+            cursor: pointer;
+        }
+        #componentBox td:hover {
+            background-color: #f5f5f5;
+        }
+                background-color: #e0f7fa;
+            }
+        .componentItem:last-child {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>电子元器件管理系统</h1>
+    <label for="id">组件 ID:</label>
+    <input type="text" id="id" name="id">
+    <label for="name">名称:</label>
+    <input type="text" id="name" name="name">
+    <label for="quantity">数量:</label>
+    <div style="display: flex; align-items: center;">
+        <input type="text" id="quantity" name="quantity" style="flex: 1;">
+        <button onclick="decreaseQuantity()" style="margin-left: 5px;">-</button>
+        <button onclick="increaseQuantity()" style="margin-left: 5px;">+</button>
+    </div>
+    <label for="location">位置 (盒名字，（x坐标，y坐标）):</label>
+    <input type="text" id="location" name="location">
+    <button onclick="addOrUpdateComponent()">添加/更新组件</button>
+    <button onclick="deleteComponent()">删除组件</button><table id="componentBox"></table><label for="searchInput">查找组件:</label><input type="text" id="searchInput" name="searchInput"><button onclick="searchComponents()">查找</button>
+    <div id="componentList"></div>
+    <script>
+        // 模拟组件管理功能
+
+        // 查找组件函数
+        function searchComponents() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            if (searchTerm === '') {
+                document.getElementById('componentList').innerHTML = '';
+                return;
+            }
+            const allComponents = JSON.parse(localStorage.getItem('components')) || {};
+            const matchedComponents = [];
+
+            // 计算每个组件的匹配度
+            for (const id in allComponents) {
+                const component = allComponents[id];
+                const idMatch = id.toLowerCase().includes(searchTerm) ? searchTerm.length / id.length : 0;
+                const nameMatch = component.name.toLowerCase().includes(searchTerm) ? searchTerm.length / component.name.length : 0;
+                const locationMatch = component.location.toLowerCase().includes(searchTerm) ? searchTerm.length / component.location.length : 0;
+                const matchScore = Math.max(idMatch, nameMatch);
+
+                if (matchScore > 0 || locationMatch > 0) {
+                    matchedComponents.push({ ...component, id, matchScore, locationMatch });
+                }
+            }
+
+            // 按匹配度排序，位置作为次要项
+            matchedComponents.sort((a, b) => {
+                if (a.matchScore !== b.matchScore) {
+                    return b.matchScore - a.matchScore;
+                }
+                return b.locationMatch - a.locationMatch;
+            });
+
+            const list = document.getElementById('componentList');
+            list.innerHTML = '';
+            for (const { id, name, quantity, location } of matchedComponents) {
+                const item = document.createElement('div');
+                item.className = 'componentItem';
+                item.addEventListener('click', () => selectComponent(id));
+                item.innerHTML = `组件编号: ${id}, 名称: ${name}, 数量: ${quantity}, 位置: ${location}`;
+                list.appendChild(item);
+            }
+        }
+
+        // 生成 5*7 的表格
+        function generateComponentBox() {
+            const table = document.getElementById('componentBox');
+            for (let y = 0; y < 5; y++) {
+                const row = table.insertRow();
+                for (let x = 0; x < 7; x++) {
+                    const cell = row.insertCell();
+                    cell.textContent = `(${x}, ${y})`;
+                    cell.addEventListener('click', () => {
+                        const boxName = prompt('请输入盒名字:');
+                        if (boxName) {
+                            document.getElementById('location').value = `${boxName}，(${x}, ${y})`;
+                        }
+                    });
+                }
+            }
+        }
+
+        window.addEventListener('load', () => {
+            generateComponentBox();
+            updateComponentList();
+        });
+        const components = JSON.parse(localStorage.getItem('components')) || {};
+
+        window.addEventListener('load', () => {
+            updateComponentList();
+        });
+
+        function addOrUpdateComponent() {
+            const componentId = document.getElementById('id').value;
+            const name = document.getElementById('name').value;
+            const quantity = document.getElementById('quantity').value;
+            // 修改此处，移除对不存在输入框的获取
+            if (components[componentId]) {
+                components[componentId].name = name;
+                components[componentId].quantity = quantity;
+            } else {
+                components[componentId] = { name, quantity, location: document.getElementById('location').value };
+            }
+            updateComponentList();
+            localStorage.setItem('components', JSON.stringify(components));
+        }
+
+        function getComponent() {
+            const componentId = document.getElementById('id').value;
+            const component = components[componentId];
+            if (component) {
+                alert(`组件编号: ${componentId}\n名称: ${component.name}\n数量: ${component.quantity}\n编号: ${component.serialNumber}`);
+            } else {
+            }
+        }
+
+        function deleteComponent() {
+            const componentId = document.getElementById('id').value;
+            if (components[componentId]) {
+                delete components[componentId];
+                updateComponentList();
+                localStorage.setItem('components', JSON.stringify(components));
+            } else {
+            }
+        }
+
+        function updateComponentList() {
+            const list = document.getElementById('componentList');
+            list.innerHTML = '';
+            for (const id in components) {
+                const component = components[id];
+                const item = document.createElement('div');
+                item.className = 'componentItem';
+                item.addEventListener('click', () => selectComponent(id));
+                item.innerHTML = `组件编号: ${id}, 名称: ${component.name}, 数量: ${component.quantity}, 位置: ${component.location}`;
+                list.appendChild(item);
+            }
+        }
+
+        let selectedComponentId = null;
+
+        function selectComponent(id) {
+            const component = components[id];
+            document.getElementById('id').value = id;
+            document.getElementById('name').value = component.name;
+            document.getElementById('quantity').value = component.quantity;
+            document.getElementById('location').value = component.location;
+            selectedComponentId = id;
+            updateComponentList();
+        }
+
+        function decreaseQuantity() {
+            const quantityInput = document.getElementById('quantity');
+            let quantity = parseInt(quantityInput.value) || 0;
+            if (quantity > 0) {
+                quantity--;
+            }
+            quantityInput.value = quantity;
+        }
+
+        function increaseQuantity() {
+            const quantityInput = document.getElementById('quantity');
+            let quantity = parseInt(quantityInput.value) || 0;
+            quantity++;
+            quantityInput.value = quantity;
+        }
+    </script>
+</body>
+</html>
